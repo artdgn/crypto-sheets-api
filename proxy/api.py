@@ -11,7 +11,7 @@ from proxy import coingecko
 
 logger = logging.getLogger(__name__)
 
-app = fastapi.FastAPI(title='CoinGecko XML proxy')
+app = fastapi.FastAPI(title='Cryptocurrency data API for Google Sheets')
 
 
 @app.get('/', response_class=responses.HTMLResponse)
@@ -20,7 +20,7 @@ def health():
     return """
         Welcome!<br>
         <a href="/docs">Docs UI</a>?<br>
-        <a href="https://github.com/artdgn/coingecko-sheets" target="_blank">GitHub</a>?
+        <a href="https://github.com/artdgn/crypto-sheets-api" target="_blank">GitHub</a>?
         """
 
 
