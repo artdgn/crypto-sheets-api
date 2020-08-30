@@ -1,5 +1,3 @@
-import urllib.parse
-
 import pytest
 import xmltodict
 from fastapi import testclient
@@ -22,7 +20,7 @@ def test_health(api_client):
 
 @pytest.mark.integration
 class TestCoingeckoXMLAny:
-    route = 'xml/coingecko'
+    route = '/xml/coingecko'
 
     def test_basic_and_jsonpath(self, api_client):
         ids = ['bitcoin', 'ethereum']
@@ -47,7 +45,7 @@ class TestCoingeckoXMLAny:
 
 @pytest.mark.integration
 class TestCoingeckoValueAny:
-    route = 'value/coingecko'
+    route = '/value/coingecko'
 
     def test_basic_and_jsonpath(self, api_client):
         ids = ['bitcoin', 'ethereum']
@@ -67,19 +65,13 @@ class TestCoingeckoValueAny:
         assert res_value.text == xml_data[XML_ROOT][ids[1]][currencies[1]]
 
 
-def encode_url(url):
-    """ This is needed to not trip on a bug in TestClient where
-    double slashes are joined to one by urljoin"""
-    return urllib.parse.quote_plus(url)
-
-
 @pytest.mark.integration
 class TestXMLGetJSON:
-    route = 'xml/any'
+    route = '/xml/any'
 
     def test_basic(self, api_client):
         url = 'https://api.icndb.com/jokes/random'
-        res = api_client.get(f'{self.route}/{encode_url(url)}')
+        res = api_client.get(f'{self.route}/{url}')
         assert res.ok
         data = xmltodict.parse(res.text)
 
@@ -92,7 +84,7 @@ class TestXMLGetJSON:
         'https://anskjvas/'  # HTTP error
     ])
     def test_json_errors(self, api_client, url):
-        res = api_client.get(f'{self.route}/{encode_url(url)}')
+        res = api_client.get(f'{self.route}/{url}')
         assert res.ok
         data = xmltodict.parse(res.text)
         assert 'error' in data[XML_ROOT]
@@ -100,14 +92,14 @@ class TestXMLGetJSON:
     def test_multiple_params(self, api_client):
         url = ('https://api.coingecko.com/api/v3/simple/price?'
                'ids=bitcoin&vs_currencies=aud')
-        res = api_client.get(f'{self.route}/{encode_url(url)}')
+        res = api_client.get(f'{self.route}/{url}')
         data = xmltodict.parse(res.text)
         # vs_currencies parameter was not ignored
         assert data[XML_ROOT]['bitcoin']['aud']
 
     def test_jsonpath(self, api_client):
         url = 'https://jsonplaceholder.typicode.com/posts/1/comments'
-        res = api_client.get(f'{self.route}/{encode_url(url)}',
+        res = api_client.get(f'{self.route}/{url}',
                              params=dict(jsonpath='[1].email'))
         data = xmltodict.parse(res.text)
         assert '@' in data[XML_ROOT].lower()
@@ -121,7 +113,7 @@ class TestXMLGetJSON:
         '[10].email'
     ])
     def test_jsonpath_errors(self, api_client, url, jsonpath):
-        res = api_client.get(f'{self.route}/{encode_url(url)}',
+        res = api_client.get(f'{self.route}/{url}',
                              params=dict(jsonpath=jsonpath))
         data = xmltodict.parse(res.text)
         assert data
@@ -130,11 +122,11 @@ class TestXMLGetJSON:
 
 @pytest.mark.integration
 class TestValueGet:
-    route = 'value/any'
+    route = '/value/any'
 
     def test_basic_jsonpath(self, api_client):
         url = 'https://jsonplaceholder.typicode.com/posts/1/comments'
-        res = api_client.get(f'{self.route}/{encode_url(url)}',
+        res = api_client.get(f'{self.route}/{url}',
                              params=dict(jsonpath='[1].email'))
         assert '@' in res.text
 
@@ -145,6 +137,6 @@ class TestValueGet:
     ])
     def test_jsonpath_errors(self, api_client, jsonpath, error_text):
         url = 'https://jsonplaceholder.typicode.com/posts/1/comments'
-        res = api_client.get(f'{self.route}/{encode_url(url)}',
+        res = api_client.get(f'{self.route}/{url}',
                              params=dict(jsonpath=jsonpath))
         assert 'error' in res.text and error_text in res.text

@@ -1,13 +1,15 @@
 ![CI](https://github.com/artdgn/crypto-sheets-api/workflows/CI/badge.svg) ![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/artdgn/crypto-sheets-api?label=dockerhub&logo=docker) ![GitHub deployments](https://img.shields.io/github/deployments/artdgn/crypto-sheets-api/crypto-sheets-api?label=heroku&logo=heroku)
 
-
 # Cryptocurrency data API for Google Sheets  
 Using CoinGecko API in Sheets to get cryptocurrency price data through a proxy API.
 
 ## Basic example
 
 Use [ImportXML](https://support.google.com/docs/answer/3093342?hl=en) to get bitcoin's current price in USD:
-> `=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd","result/bitcoin/usd")`.
+```py
+=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?
+    ids=bitcoin&vs_currencies=usd", "result/bitcoin/usd")
+```
  
 ![](https://artdgn.github.io/images/crypto-sheets-api.gif)
 
@@ -16,7 +18,7 @@ Use [ImportXML](https://support.google.com/docs/answer/3093342?hl=en) to get bit
 - [Example API on Heroku](https://crypto-sheets-api.herokuapp.com) free tier, welcome to use as example. Use "Deploy to Heroku" button below to deploy your own.
 - [Example Sheet](https://docs.google.com/spreadsheets/d/1cY8n9s1QnW7HQuMdJjihjpKlVSit2kRAT7oe7lFySLg/edit?usp=sharing) with the examples from this readme.
 
-## Advanced usage for CoingGecko routes
+## Usage for CoingGecko routes
 Use `/xml/coingecko` or `/value/coingecko` to import data from any CoinGecko API route.
 
 For full documentation of endpoints (live OpenAPI) go to `https://your-proxy-api/docs` ([Example on Heroku](https://crypto-sheets-api.herokuapp.com/docs))
@@ -26,7 +28,10 @@ Use any route on [CoinGecko API live docs](https://www.coingecko.com/ja/api#expl
 > Example: Use `/simple/price` to get current bitcoin price in usd: `/simple/price?ids=bitcoin&vs_currencies=usd`. See the options below for usage in Sheets.
 
 ### Using ImportXML in Sheets: 
-> `=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd","result/bitcoin/usd")`
+```py
+=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?
+    ids=bitcoin&vs_currencies=usd", "result/bitcoin/usd")
+```
 <details><summary> Detailed instruction </summary>
 
 > Xpath expression can be used more easilty since the full XML is directly visible as output of the proxy API.
@@ -38,7 +43,10 @@ Use any route on [CoinGecko API live docs](https://www.coingecko.com/ja/api#expl
 
 
 ### Using ImportXML in Sheets with JSONPath: 
-> `=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd","result")`
+```py
+=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?
+    ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd","result")
+```
 <details><summary> Detailed instructions</summary>
 
 > JSONPath should be preferred because not every valid JSON can be converted into XML (e.g. if some keys start with numbers).
@@ -49,7 +57,10 @@ Use any route on [CoinGecko API live docs](https://www.coingecko.com/ja/api#expl
 </details>
 
 ### Using ImportDATA in Sheets: 
-> `=ImportDATA("https://your-proxy-api/value/coingecko/simple/price?ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd")`
+```py
+=ImportDATA("https://your-proxy-api/value/coingecko/simple/price?
+    ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd")
+```
 <details><summary> Detailed instructions</summary>
 
 > ImportDATA is limited to 50 calls per sheet, so should be used in small sheets only.
