@@ -2,17 +2,15 @@
 
 
 # Cryptocurrency data API for Google Sheets  
-Using CoinGecko API in Sheets to get cryptocurrency price data.
+Using CoinGecko API in Sheets to get cryptocurrency price data through a proxy API.
 
-## Basic usage
+## Basic example
 
-Use [ImportXML](https://support.google.com/docs/answer/3093342?hl=en) to 
-get basic price data:
-> `=ImportXML("https://your-api-address/coingecko/xml/price/btc","result")`.
+Use [ImportXML](https://support.google.com/docs/answer/3093342?hl=en) to get bitcoin's current price in USD:
+> `=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd","result/bitcoin/usd")`.
  
 ![](https://artdgn.github.io/images/crypto-sheets-api.gif)
 
-For full documentation of proxy endpoints (live OpenAPI) go to `https://your-api-address/docs`
 
 ## Live example API and Sheet:
 - [Example API on Heroku](https://crypto-sheets-api.herokuapp.com) free tier, welcome to use as example. Use "Deploy to Heroku" button below to deploy your own.
@@ -21,24 +19,26 @@ For full documentation of proxy endpoints (live OpenAPI) go to `https://your-api
 ## Advanced usage for CoingGecko routes
 Use `/xml/coingecko` or `/value/coingecko` to import data from any CoinGecko API route.
 
+For full documentation of endpoints (live OpenAPI) go to `https://your-proxy-api/docs` ([Example on Heroku](https://crypto-sheets-api.herokuapp.com/docs))
+
 Use any route on [CoinGecko API live docs](https://www.coingecko.com/ja/api#explore-api) to create your target path.
 
 > Example: Use `/simple/price` to get current bitcoin price in usd: `/simple/price?ids=bitcoin&vs_currencies=usd`. See the options below for usage in Sheets.
 
 ### Using ImportXML in Sheets: 
-> `=ImportXML("https://your-api-address/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd","result/bitcoin/usd")`
+> `=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd","result/bitcoin/usd")`
 <details><summary> Detailed instruction </summary>
 
 > Xpath expression can be used more easilty since the full XML is directly visible as output of the proxy API.
 
-1. Check the proxy API's output XML by going to the proxy URL (e.g. `https://your-api-address/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd` in the browser)
+1. Check the proxy API's output XML by going to the proxy URL (e.g. `https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd` in the browser)
 2. Use [XPath syntax](https://www.w3schools.com/xml/xpath_syntax.asp) to create an XPath expression to extract your data (example: `result/bitcoin/usd`)
 
 </details>
 
 
 ### Using ImportXML in Sheets with JSONPath: 
-> `=ImportXML("https://your-api-address/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd","result")`
+> `=ImportXML("https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd","result")`
 <details><summary> Detailed instructions</summary>
 
 > JSONPath should be preferred because not every valid JSON can be converted into XML (e.g. if some keys start with numbers).
@@ -49,7 +49,7 @@ Use any route on [CoinGecko API live docs](https://www.coingecko.com/ja/api#expl
 </details>
 
 ### Using ImportDATA in Sheets: 
-> `=ImportDATA("https://your-api-address/value/coingecko/simple/price?ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd")`
+> `=ImportDATA("https://your-proxy-api/value/coingecko/simple/price?ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd")`
 <details><summary> Detailed instructions</summary>
 
 > ImportDATA is limited to 50 calls per sheet, so should be used in small sheets only.
@@ -64,10 +64,10 @@ Follow the same steps as for JSONPath with ImportXML above, but use a `/value/co
 Use the generic `/xml/any` or `/value/any` to import data from any other API URL that returns a JSON. Intead of CoinGecko routes, use the full target URL. 
 
 For example, in `/xml/coingecko/` example we used:
-> `https://your-api-address/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd`
+> `https://your-proxy-api/xml/coingecko/simple/price?ids=bitcoin&vs_currencies=usd`
 
 The generic equivalent would be: 
-> `https://your-api-address/xml/any/https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd` (add `jsonpath` as needed)
+> `https://your-proxy-api/xml/any/https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd` (add `jsonpath` as needed)
 
 
 ## Running the API
@@ -114,21 +114,16 @@ For the API to be accessible from Sheets it needs to be publicly accessible
     
 </details>
 
-## Simple manual CLI usage (not API)
-<details><summary>Manual CLI usage instructions</summary>
-
-- Copy your column of ticker symbols from sheets.
-- Run:
-    - Local python virtual environment: `python cli.py "<paste-here>"` (paste before closing the quote)
-    - Docker: `docker run -it --rm artdgn/crypto-sheets-api python cli.py "<paste-here>"` 
-- Copy paste from terminal output back into sheets. 
-
-</details>
-
-
 ## Alternative solutions
 [ImportJSON](https://github.com/bradjasper/ImportJSON) seems to also work, and doesn't require 
-any external resources (however, I only found it after similar type of solutions didn't work, and I've already implemented this proxy API).
+any external resources (I only found it after I've already implemented this proxy API because initially I found only non-working solutions of that type).
+
+<details><summary>Some other options that didn't work for me (why I've implemented this)</summary>
+
+- [CRYPTOFINANCE](https://cryptofinance.ai) stopped working. In general trying many of the Google App Scripts solutions (like [IMPORTJSON](https://github.com/qeet/IMPORTJSONAPI) or like the updated CRYPTOFINANCE) didn't work for me because of Auth issues.
+- Other Google Sheet add-ons like [Apipheny](https://apipheny.io/) were either paid or required API keys (so registration, or additional Yak-Shaving).
+</details>
+
 
 ## Privacy thoughts
 <details><summary>Privacy related thoughts</summary>

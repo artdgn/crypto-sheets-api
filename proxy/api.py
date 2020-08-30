@@ -7,14 +7,12 @@ import requests
 import xmltodict
 from starlette import responses
 
-from proxy import coingecko
-
 logger = logging.getLogger(__name__)
 
 app = fastapi.FastAPI(title='Cryptocurrency data API for Google Sheets')
 
 ROOT_KEY = 'result'
-
+COINGECKO_ADDRESS = 'https://api.coingecko.com/api/v3/'
 
 @app.get('/', response_class=responses.HTMLResponse)
 def health():
@@ -24,29 +22,6 @@ def health():
         <a href="/docs">Docs UI</a>?<br>
         <a href="https://github.com/artdgn/crypto-sheets-api" target="_blank">GitHub</a>?
         """
-
-
-@app.get("/xml/coingecko/price/{symbol}", response_class=responses.PlainTextResponse)
-def coingecko_xml_price(symbol: str, currency: str = 'usd') -> str:
-    """
-    Return price for ticker symbol in XML format for usage in google sheets.
-
-    ### Parameters:
-    - symbol: coin (ticker) symbol (e.g. btc)
-    - currency: currency for price
-
-    ### Returns:
-    XML with just "price" as the only element
-
-    ### Example usage in Sheets:
-    `=importxml("https://your-api-address/coingecko/xml/price/btc","result")`
-    """
-    try:
-        prices, _ = coingecko.Client().prices_for_symbols([symbol], currency=currency)
-        result = prices[0]
-    except Exception as e:
-        result = f'error: {str(e)}'
-    return xmltodict.unparse({ROOT_KEY: result}, pretty=True)
 
 
 @app.get("/xml/coingecko/{route:path}", response_class=responses.PlainTextResponse)
@@ -80,7 +55,7 @@ def get_xml_coingecko(route: str, _request: fastapi.Request, jsonpath: str = Non
     ```
     """
     return _get_request_to_xml(
-        url=f'{coingecko.Client.ADDRESS}{route}',
+        url=f'{COINGECKO_ADDRESS}{route}',
         params=_upcaptured_query_params(_request, ['jsonpath']),
         jsonpath=jsonpath)
 
@@ -123,7 +98,7 @@ def get_xml_any(url: str, _request: fastapi.Request, jsonpath: str = None) -> st
 
 
 @app.get("/value/coingecko/{route:path}", response_class=responses.PlainTextResponse)
-def value_get(route: str, jsonpath: str, _request: fastapi.Request) -> str:
+def get_value_coingecko(route: str, jsonpath: str, _request: fastapi.Request) -> str:
     """
     GET any value from any route of the CoinGecko API by extracting it
     using [JSONPath](https://goessner.net/articles/JsonPath/).
@@ -148,14 +123,14 @@ def value_get(route: str, jsonpath: str, _request: fastapi.Request) -> str:
 
     """
     return _get_request_to_value(
-        url=f'{coingecko.Client.ADDRESS}{route}',
+        url=f'{COINGECKO_ADDRESS}{route}',
         params=_upcaptured_query_params(_request, ['jsonpath']),
         jsonpath=jsonpath,
     )
 
 
 @app.get("/value/any/{url:path}", response_class=responses.PlainTextResponse)
-def value_get(url: str, jsonpath: str, _request: fastapi.Request) -> str:
+def get_value_any(url: str, jsonpath: str, _request: fastapi.Request) -> str:
     """
     GET any value from any API returning a JSON by extracting the
     value using [JSONPath](https://goessner.net/articles/JsonPath/).
