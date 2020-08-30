@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Union, List, Dict
 
 import fastapi
 import jsonpath_ng
@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 app = fastapi.FastAPI(title='Cryptocurrency data API for Google Sheets')
 
+ROOT_KEY = 'result'
+
 
 @app.get('/', response_class=responses.HTMLResponse)
 def health():
@@ -24,8 +26,8 @@ def health():
         """
 
 
-@app.get("/coingecko/xml/price/{symbol}", response_class=responses.PlainTextResponse)
-def xml_price(symbol: str, currency: str = 'usd') -> str:
+@app.get("/xml/coingecko/price/{symbol}", response_class=responses.PlainTextResponse)
+def coingecko_xml_price(symbol: str, currency: str = 'usd') -> str:
     """
     Return price for ticker symbol in XML format for usage in google sheets.
 
@@ -44,11 +46,47 @@ def xml_price(symbol: str, currency: str = 'usd') -> str:
         result = prices[0]
     except Exception as e:
         result = f'error: {str(e)}'
-    return xmltodict.unparse({'result': result}, pretty=True)
+    return xmltodict.unparse({ROOT_KEY: result}, pretty=True)
 
 
-@app.get("/xml/get", response_class=responses.PlainTextResponse)
-def xml_get_json(url: str, _request: fastapi.Request, jsonpath: str = None) -> str:
+@app.get("/xml/coingecko/{route:path}", response_class=responses.PlainTextResponse)
+def get_xml_coingecko(route: str, _request: fastapi.Request, jsonpath: str = None) -> str:
+    """
+    GET JSON data from any route of the CoinGecko API and encode it as XML, optionally extracting
+    parts from it using [JSONPath](https://goessner.net/articles/JsonPath/).
+
+    > Use [CoinGecko API live docs](https://www.coingecko.com/ja/api#explore-api)
+    to create your route and parameters.
+
+    ### Parameters:
+    - route: CoinGecko API route (e.g. `simple/price`, or `coins/bitcoin`)
+    - jsonpath: optional [jsonpath](https://goessner.net/articles/JsonPath/)
+        to apply to resulting JSON before encoding as XML
+        in case full JSON is not a valid XML (or just to simplify xpath expression)
+
+    ### Returns:
+    JSON response encoded as XML under the root "result" field.
+
+    ### Example usage in Sheets:
+    ```
+    =importxml("https://your-api-address/xml/coingecko/simple/price?
+        ids=bitcoin&vs_currencies=usd", "result/bitcoin/usd")
+    ```
+
+    Same example but using JSONPath expression:
+    ```
+    =importxml("https://your-api-address/xml/coingecko/simple/price?
+        ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd", "result")
+    ```
+    """
+    return _get_request_to_xml(
+        url=f'{coingecko.Client.ADDRESS}{route}',
+        params=_upcaptured_query_params(_request, ['jsonpath']),
+        jsonpath=jsonpath)
+
+
+@app.get("/xml/any/{url:path}", response_class=responses.PlainTextResponse)
+def get_xml_any(url: str, _request: fastapi.Request, jsonpath: str = None) -> str:
     """
     GET any JSON from any API and encode it as XML, optionally extracting
     parts from it using [JSONPath](https://goessner.net/articles/JsonPath/).
@@ -66,70 +104,58 @@ def xml_get_json(url: str, _request: fastapi.Request, jsonpath: str = None) -> s
     - Usage in sheets if you want to query the Chuck Norris jokes API
         for a random dirty joke and get the joke value using an XPath expression:
     ```
-    =importxml("https://your-api-address/xml/get?
-            url=https://api.icndb.com/jokes/random?limitTo=[explicit]",
+    =importxml("https://your-api-address/xml/any/
+            https://api.icndb.com/jokes/random?limitTo=[explicit]",
             "result/value/joke")
     ```
 
     - Same example but using JSONPath expression:
     ```
-    =importxml("https://your-api-address/xml/get?
-            url=https://api.icndb.com/jokes/random?limitTo=[explicit]&jsonpath=value.joke",
+    =importxml("https://your-api-address/xml/any/
+            https://api.icndb.com/jokes/random?limitTo=[explicit]&jsonpath=value.joke",
             "result")
     ```
     """
-
-    # extract any query params that are not captured by the `url`
-    # parameter (e.g. because of `&` splitting
-    additional_params = {k: v for k, v in _request.query_params.items()
-                         if k not in ['url', 'jsonpath']}
-
-    # get the data
-    try:
-        response = requests.get(url, params=additional_params)
-
-        if not response.ok:
-            raise fastapi.HTTPException(response.status_code, response.text)
-
-        result = response.json()
-
-        if jsonpath:
-            result = _try_apply_jsonpath(result, jsonpath)
-
-    except Exception as e:
-        result = f'error: {str(e)}'
-
-    # ensure single root
-    if isinstance(result, list):
-        single_root = {'result': {'items': result}}
-    else:
-        single_root = {'result': result}
-
-    return xmltodict.unparse(single_root, pretty=True)
+    return _get_request_to_xml(
+        url=url,
+        params=_upcaptured_query_params(_request, ['url', 'jsonpath']),
+        jsonpath=jsonpath)
 
 
-def _try_apply_jsonpath(result: Union[dict, list], jsonpath: str) -> Union[dict, list]:
-    """ applies jsonpath expression or add the error that resulted from trying """
-    try:
-        values = [match.value for match in jsonpath_ng.parse(jsonpath).find(result)]
-        if len(values) == 1:
-            result = values[0]
-        elif not len(values):
-            raise ValueError(f'match for {jsonpath} not found')
-        else:
-            result = values
-    except Exception as e:
-        err_info = {'jsonpath-error': str(e)}
-        if isinstance(result, dict):
-            result.update(err_info)
-        else:
-            result.append(err_info)
-        logger.error(f'jsonpath error: {e}')
-    return result
+@app.get("/value/coingecko/{route:path}", response_class=responses.PlainTextResponse)
+def value_get(route: str, jsonpath: str, _request: fastapi.Request) -> str:
+    """
+    GET any value from any route of the CoinGecko API by extracting it
+    using [JSONPath](https://goessner.net/articles/JsonPath/).
+    This allows using [IMPORTDATA](https://support.google.com/docs/answer/3093335)
+    in Sheets.
+
+    > Warning: IMPORTDATA is
+    [limited to 50 calls per sheet](https://support.google.com/docs/answer/3093335)
+
+    ### Parameters:
+    - jsonpath: [jsonpath](https://goessner.net/articles/JsonPath/)
+        to extract the value from the returned JSON
+
+    ### Returns:
+    Value returned as plain text
+
+    ### Example usage in Sheets:
+    ```
+    =importdata("https://your-api-address/value/coingecko/simple/price?
+        ids=bitcoin&vs_currencies=usd&jsonpath=bitcoin.usd")
+    ```
+
+    """
+    return _get_request_to_value(
+        url=f'{coingecko.Client.ADDRESS}{route}',
+        params=_upcaptured_query_params(_request, ['jsonpath']),
+        jsonpath=jsonpath,
+    )
 
 
-@app.get("/datapoint/get", response_class=responses.PlainTextResponse)
-def datapoint_get(url: str, jsonpath: str, _request: fastapi.Request) -> str:
+@app.get("/value/any/{url:path}", response_class=responses.PlainTextResponse)
+def value_get(url: str, jsonpath: str, _request: fastapi.Request) -> str:
     """
     GET any value from any API returning a JSON by extracting the
     value using [JSONPath](https://goessner.net/articles/JsonPath/).
@@ -151,37 +177,106 @@ def datapoint_get(url: str, jsonpath: str, _request: fastapi.Request) -> str:
     - Usage in sheets if you want to query the Chuck Norris jokes API
         for a random dirty joke:
     ```
-    =importdata("https://your-api-address/datapoint/get?
-                url=https://api.icndb.com/jokes/random?limitTo=[explicit]
+    =importdata("https://your-api-address/value/any/
+                https://api.icndb.com/jokes/random?limitTo=[explicit]
                 &jsonpath=value.joke")
     ```
 
     """
-    # extract any query params that are not captured by the `url`
-    # parameter (e.g. because of `&` splitting
-    additional_params = {k: v for k, v in _request.query_params.items()
-                         if k not in ['url', 'jsonpath']}
+    return _get_request_to_value(
+        url=url,
+        params=_upcaptured_query_params(_request, ['url', 'jsonpath']),
+        jsonpath=jsonpath,
+    )
 
-    # get the data
+
+def _upcaptured_query_params(request: fastapi.Request, expected_args: List[str]
+                             ) -> dict:
+    """
+    Extract any query params that are not captured because of `&` splitting.
+    """
+    return {k: v for k, v in request.query_params.items()
+            if k not in expected_args}
+
+
+def _get_request_to_xml(url: str, params: dict, jsonpath: str = None) -> str:
+    """ send a get request and convert to XML optionally applying jsonpath"""
     try:
-        response = requests.get(url, params=additional_params)
-
+        response = requests.get(url, params=params)
         if not response.ok:
             raise fastapi.HTTPException(response.status_code, response.text)
-
         result = response.json()
+        result = _try_apply_jsonpath(result, jsonpath) if jsonpath else result
 
-        # jsonpath
-        values = [match.value for match in jsonpath_ng.parse(jsonpath).find(result)]
+    except Exception as e:
+        result = f'error: {str(e)}'
 
-        if not len(values):
-            raise ValueError(f'match for {jsonpath} not found')
-        if len(values) > 1:
-            raise ValueError(f'more than one match for {jsonpath}')
+    return _to_xml(result)
 
-        return str(values[0])
+
+def _get_request_to_value(url: str, params: dict, jsonpath: str) -> str:
+    """ send a get request and extract value using jsonpath"""
+    try:
+        response = requests.get(url, params=params)
+        return _single_value_jsonpath_result(response, jsonpath)
 
     except Exception as e:
         return f'error: {str(e)}'
 
 
+def _single_value_jsonpath_result(response: requests.Response, jsonpath: str
+                                  ) -> str:
+    """
+    Checks and extracts a single value from the response according to the jsonpath.
+    """
+    if not response.ok:
+        raise fastapi.HTTPException(response.status_code, response.text)
+
+    result = response.json()
+
+    # jsonpath
+    values = [match.value for match in jsonpath_ng.parse(jsonpath).find(result)]
+
+    if not len(values):
+        raise ValueError(f'match for {jsonpath} not found')
+    if len(values) > 1:
+        raise ValueError(f'more than one match for {jsonpath}')
+
+    return str(values[0])
+
+
+def _try_apply_jsonpath(result: Union[dict, list],
+                        jsonpath: str
+                        ) -> Union[dict, list]:
+    """ Applies jsonpath expression or adds the error that results from trying """
+    try:
+        values = [match.value for match in jsonpath_ng.parse(jsonpath).find(result)]
+        if len(values) == 1:
+            result = values[0]
+        elif not len(values):
+            raise ValueError(f'match for {jsonpath} not found')
+        else:
+            result = values
+
+    except Exception as e:
+        err_info = {'jsonpath-error': str(e)}
+        if isinstance(result, dict):
+            result.update(err_info)
+        else:
+            result.append(err_info)
+        logger.error(f'jsonpath error: {e}')
+
+    return result
+
+
+def _to_xml(result: Union[List, Dict]) -> str:
+    """
+    Wraps a result in a single root structure
+    suitable for XML, and converts to XML
+    """
+    if isinstance(result, list):
+        single_root = {ROOT_KEY: {'items': result}}
+    else:
+        single_root = {ROOT_KEY: result}
+
+    return xmltodict.unparse(single_root, pretty=True)
