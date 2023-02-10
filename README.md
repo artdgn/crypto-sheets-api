@@ -1,4 +1,4 @@
-![CI](https://github.com/artdgn/crypto-sheets-api/workflows/CI/badge.svg) ![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/artdgn/crypto-sheets-api?label=dockerhub&logo=docker) ![GitHub deployments](https://img.shields.io/github/deployments/artdgn/crypto-sheets-api/crypto-sheets-api?label=heroku&logo=heroku)
+![CI](https://github.com/artdgn/crypto-sheets-api/workflows/CI/badge.svg) ![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/artdgn/crypto-sheets-api?label=dockerhub&logo=docker) ![GitHub deployments](https://img.shields.io/github/deployments/artdgn/crypto-sheets-api/crypto-sheets-api?label=render&logo=render)
 
 # Cryptocurrency data API for Google Sheets  
 Using CoinGecko API in Sheets to get cryptocurrency price data through a proxy API.
@@ -15,13 +15,13 @@ Use [ImportXML](https://support.google.com/docs/answer/3093342?hl=en) to get bit
 
 
 ## Live example API and Sheet:
-- [Example API on Heroku](https://crypto-sheets-api.herokuapp.com) free tier, welcome to use as example. Use "Deploy to Heroku" button below to deploy your own.
+- [Example API on Render](https://crypto-sheets-api.onrender.com) free tier, welcome to use as example. 
 - [Example Sheet](https://docs.google.com/spreadsheets/d/1cY8n9s1QnW7HQuMdJjihjpKlVSit2kRAT7oe7lFySLg/edit?usp=sharing) with the examples from this readme.
 
 ## Usage for CoingGecko routes
 Use `/xml/coingecko` or `/value/coingecko` to import data from any CoinGecko API route.
 
-For full documentation of endpoints (live OpenAPI) go to `https://your-proxy-api/docs` ([Example on Heroku](https://crypto-sheets-api.herokuapp.com/docs))
+For full documentation of endpoints (live OpenAPI) go to `https://your-proxy-api/docs` ([Example on Render](https://crypto-sheets-api.onrender.com/docs))
 
 Use any route on [CoinGecko API live docs](https://www.coingecko.com/ja/api#explore-api) to create your target path.
 
@@ -85,10 +85,10 @@ The generic equivalent would be:
 For the API to be accessible from Sheets it needs to be publicly accessible 
 (because Google is making the requests not from your local machine).
 
-### Host API on Heroku
+### Host API on Render
 > This option is best for actual usage (the free tier should be enough). Also best in terms of privacy
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/artdgn/crypto-sheets-api)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/artdgn/crypto-sheets-api)
 
 
 ### Run API locally and expose publicly via [ngrok](https://ngrok.com/):
@@ -142,7 +142,7 @@ any external resources (I only found it after I've already implemented this prox
 TL;DR: probably best to host your own.
 
 1. I don't think there's a way to know which accounts are making any of the requests.
-2. Hosting your own proxy API (e.g. on Heroku) is probably the best option since your requests will be visible only to your proxy (and Heroku).
+2. Hosting your own proxy API (e.g. on Render) is probably the best option since your requests will be visible only to your proxy (and Render).
 3. Hosting a local proxy API via tunnelling (the "ngrok" option) will mean that requests to CoinGecko (or any other API you're using through this) will come from your machine.
 4. Using my example deployment means that I can see the request parameters in the logs (but with no idea about the google accounts).
 
